@@ -23,40 +23,53 @@ CORS(app)
 '''
 @TODO implement endpoint
     GET /drinks
-        it should be a public endpoint
-        it should contain only the drink.short() data representation
+    drink.short() data representation
     returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
-        or appropriate status code indicating reason for failure
+    or appropriate status code indicating reason for failure
 '''
 @app.route('/drinks', methods=['GET'])
 def get_drinks():
-    drinks = Drink.query.all()
-    formatted_drinks =[drink.short() for drink in drinks]
+    try:
+       drinks = Drink.query.all()
+       formatted_drinks =[drink.short() for drink in drinks]
 
-    return jsonify({
+       if  drinks is None:
+         abort(404)
+
+       return jsonify({
         'success': True,
         'drinks': formatted_drinks
     }), 200
+    
+    except:
+        abort(422)
 
 '''
 @TODO implement endpoint
     GET /drinks-detail
-        it should require the 'get:drinks-detail' permission
-        it should contain the drink.long() data representation
+    it should require the 'get:drinks-detail' permission
+    it should contain the drink.long() data representation
     returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
-        or appropriate status code indicating reason for failure
+    or appropriate status code indicating reason for failure
 '''
 
 @app.route('/drinks-detail', methods=['GET'])
-#@requires_auth("get:drinks-detail")
-def get_drink_detail():
-    drinks = Drink.query.all()
-    formatted_drinks =[drink.long() for drink in drinks]
+@requires_auth("get:drinks-detail")
+def get_drink_detail(jwt):
+    try:
+      drinks = Drink.query.all()
+      formatted_drinks =[drink.long() for drink in drinks]
 
-    return jsonify({
-        'success': True,
-        'drinks': formatted_drinks
-    })
+      if  drinks is None:
+         abort(404)
+
+      return jsonify({
+          'success': True,
+          'drinks': formatted_drinks
+      }),200
+    except:
+        abort(422)
+
 '''
 @TODO implement endpoint
     POST /drinks
@@ -64,22 +77,29 @@ def get_drink_detail():
         it should require the 'post:drinks' permission
         it should contain the drink.long() data representation
     returns status code 200 and json {"success": True, "drinks": drink} where drink an array containing only the newly created drink
-        or appropriate status code indicating reason for failure
+    or appropriate status code indicating reason for failure
 '''
 @app.route('/drinks', methods=['POST'])
-#@requires_auth('post:drinks')
-def post_new_drink():
-    data = request.get_json()
-    title = data['title']
-    recipe= data['recipe']
-    drink = Drink(title=title, recipe=recipe)
-    drink.insert()
+@requires_auth('post:drinks')
+def post_new_drink(jwt):
+    try:
+      data = request.get_json()
+      title = data['title']
+      recipe= json.dumps(data['recipe'])
 
-    return jsonify({
+      if ((title is None) and (recipe is None)):
+        abort(422)
+
+
+      drink = Drink(title=title, recipe=recipe)
+      drink.insert()
+
+      return jsonify({
         'success': True,
-        'drinks': str(data)
-    })
-    
+        'drinks': [drink.long()]
+      }),200
+    except:
+        abort(422)
 
 '''
 @TODO implement endpoint
@@ -90,26 +110,30 @@ def post_new_drink():
         it should require the 'patch:drinks' permission
         it should contain the drink.long() data representation
     returns status code 200 and json {"success": True, "drinks": drink} where drink an array containing only the updated drink
-        or appropriate status code indicating reason for failure
+    or appropriate status code indicating reason for failure
 '''
+
 @app.route('/drinks/<int:id>', methods=['PATCH'])
 @requires_auth('patch:drinks')
-def update_drink(jwt, id):
-    drink = Drink.query.get(id)
-    data = request.get_json()
-    title = data['title']
-    recipe= data['recipe']
+def update_drink(id , jwt):
+    try:
+      drink = Drink.query.get(id)
 
-    drink.title = title
-    drink.recipe = recipe
+      if drink is None:
+        abort(404)
 
-    drink.update()
+      data = request.get_json()
+      drink.title = data['title']
+      drink.recipe = json.dumps(data['recipe'])
 
-    return jsonify({
+      drink.update()
+
+      return jsonify({
         'success': True,
         'drinks': [drink.long()]
-    })
-
+      }),200
+    except:
+        abort(422)
 '''
 @TODO implement endpoint
     DELETE /drinks/<id>
@@ -122,17 +146,20 @@ def update_drink(jwt, id):
 '''
 @app.route('/drinks/<int:id>', methods=['DELETE'])
 @requires_auth('delete:drinks')
-def delete_drink(jwt, id):
-    drink = Drink.query.get(id)
-    if drink is None:
+def delete_drink(id , jwt):
+    try:
+      drink = Drink.query.get(id)
+      if drink is None:
         abort(404)
 
-    drink.delete()
+      drink.delete()
 
-    return jsonify({
+      return jsonify({
         'success': True,
         'delete': drink.id
-    })
+      }), 200
+    except:
+        abort(422)
 
 # Error Handling
 '''
@@ -173,6 +200,8 @@ def resource_not_found(error):
         "message": "resource not found"
     }), 404
 
+
+
 '''
 @TODO implement error handler for AuthError
     error handler should conform to general task above
@@ -183,3 +212,6 @@ def process_AuthError(error):
     response.status_code = error.status_code
 
     return response
+
+
+

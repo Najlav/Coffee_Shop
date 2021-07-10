@@ -1,8 +1,9 @@
 import json
-from flask import request, _request_ctx_stack ,  abort
+from flask import request, _request_ctx_stack , abort
 from functools import wraps
 from jose import jwt
 from urllib.request import urlopen
+
 
 
 
@@ -32,8 +33,8 @@ class AuthError(Exception):
     return the token part of the header
 '''
 def get_token_auth_header():
-    """Obtains the Access Token from the Authorization Header
-    """
+    """Obtains the Access Token from the Authorization Header"""
+
     auth = request.headers.get('Authorization', None)
     if not auth:
         raise AuthError({
@@ -62,7 +63,7 @@ def get_token_auth_header():
 
     token = parts[1]
     return token
-   #raise Exception('Not Implemented')
+  
 
 '''
 @TODO implement check_permissions(permission, payload) method
@@ -77,10 +78,10 @@ def get_token_auth_header():
 '''
 def check_permissions(permission, payload):
     if 'permissions' not in payload:
-                        raise AuthError({
-                            'code': 'invalid_claims',
-                            'description': 'Permissions not included in JWT.'
-                        }, 400)
+        raise AuthError({
+            'code': 'invalid_claims',
+            'description': 'Permissions not included in JWT.'
+        }, 400)
 
     if permission not in payload['permissions']:
         raise AuthError({
@@ -88,7 +89,7 @@ def check_permissions(permission, payload):
             'description': 'Permission not found.'
         }, 403)
     return True
-   # raise Exception('Not Implemented')
+   
 
 '''
 @TODO implement verify_decode_jwt(token) method
@@ -115,6 +116,8 @@ def verify_decode_jwt(token):
         }, 401)
 
     for key in jwks['keys']:
+        print(key['kid'])
+        print(unverified_header['kid'])
         if key['kid'] == unverified_header['kid']:
             rsa_key = {
                 'kty': key['kty'],
@@ -123,6 +126,7 @@ def verify_decode_jwt(token):
                 'n': key['n'],
                 'e': key['e']
             }
+
     if rsa_key:
         try:
             payload = jwt.decode(
@@ -166,15 +170,15 @@ def verify_decode_jwt(token):
     it should use the check_permissions method validate claims and check the requested permission
     return the decorator which passes the decoded payload to the decorated method
 '''
-def requires_auth(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        token = get_token_auth_header()
-        try:
+def requires_auth(permission=''):
+    def requires_auth_decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            token = get_token_auth_header()
+            print(token)
             payload = verify_decode_jwt(token)
-        except:
-            abort(401)
-        return f(payload, *args, **kwargs)
+            check_permissions(permission, payload)
+            return f(payload, *args, **kwargs)
 
-    return wrapper
-
+        return wrapper
+    return requires_auth_decorator
