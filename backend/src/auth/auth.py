@@ -116,8 +116,6 @@ def verify_decode_jwt(token):
         }, 401)
 
     for key in jwks['keys']:
-        print(key['kid'])
-        print(unverified_header['kid'])
         if key['kid'] == unverified_header['kid']:
             rsa_key = {
                 'kty': key['kty'],
@@ -157,9 +155,9 @@ def verify_decode_jwt(token):
                 'description': 'Unable to parse authentication token.'
             }, 400)
     raise AuthError({
-                'code': 'invalid_header',
-                'description': 'Unable to find the appropriate key.'
-            }, 400)
+                'code': 'unauthorized',
+                'description': 'Permission not found.'
+            }, 403)
 '''
 @TODO implement @requires_auth(permission) decorator method
     @INPUTS
@@ -175,7 +173,6 @@ def requires_auth(permission=''):
         @wraps(f)
         def wrapper(*args, **kwargs):
             token = get_token_auth_header()
-            print(token)
             payload = verify_decode_jwt(token)
             check_permissions(permission, payload)
             return f(payload, *args, **kwargs)
