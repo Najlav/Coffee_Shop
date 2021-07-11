@@ -17,7 +17,7 @@ CORS(app)
 !! NOTE THIS MUST BE UNCOMMENTED ON FIRST RUN
 !! Running this funciton will add one
 '''
-#db_drop_and_create_all()
+db_drop_and_create_all()
 
 # ROUTES
 '''
@@ -115,7 +115,7 @@ def post_new_drink(jwt):
 
 @app.route('/drinks/<int:id>', methods=['PATCH'])
 @requires_auth('patch:drinks')
-def update_drink(id , jwt):
+def update_drink(jwt , id):
     try:
       drink = Drink.query.get(id)
 
@@ -123,8 +123,14 @@ def update_drink(id , jwt):
         abort(404)
 
       data = request.get_json()
-      drink.title = data['title']
-      drink.recipe = json.dumps(data['recipe'])
+      if 'title' in data:
+         drink.title =data['title']
+
+      if 'recipe' in data:
+         Recipe = data['recipe']
+         drink.recipe = json.dumps(Recipe)
+
+     
 
       drink.update()
 
@@ -146,9 +152,10 @@ def update_drink(id , jwt):
 '''
 @app.route('/drinks/<int:id>', methods=['DELETE'])
 @requires_auth('delete:drinks')
-def delete_drink(id , jwt):
+def delete_drink(jwt , id):
     try:
       drink = Drink.query.get(id)
+
       if drink is None:
         abort(404)
 
@@ -212,6 +219,8 @@ def process_AuthError(error):
     response.status_code = error.status_code
 
     return response
+
+
 
 
 
